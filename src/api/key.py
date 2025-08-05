@@ -27,7 +27,7 @@ async def create_server(data: KeyCreate):
     user_data["keys"].append({
         "id": 4,
         "country": server_info["country"],
-        "key": f"vless://new-key-value/{server_info["country"]}",
+        "key": f"vless://new-key-value/{server_info['country']}",
         "created_at": "2025-08-04T20:00:00Z"
     })
     return {"id": 4}

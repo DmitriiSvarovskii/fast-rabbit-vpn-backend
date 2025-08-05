@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 
-class XrayConfigBase(BaseModel):
+class XraySchemasBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     user_id: int
     uuid: str
@@ -12,5 +12,5 @@ class XrayConfigBase(BaseModel):
     expires_at: Optional[datetime.date | None]
 
 
-class XrayConfigCreate(XrayConfigBase):
+class XraySchemasCreate(XraySchemasBase):
     pass

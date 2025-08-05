@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, status
 
-from src.schemas.vpn_config import XrayConfigCreate
+from src.schemas.xray import XraySchemasCreate
 from src.utils.xray import XrayService
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,8 @@ router = APIRouter(
 )
 async def reload_xray_service():
     try:
-        await XrayService.reload()
+        service = XrayService()
+        await service.reload()
         return {"message": "Xray reloaded"}
     except Exception as e:
         logger.error(e)
@@ -33,10 +34,11 @@ async def reload_xray_service():
     status_code=status.HTTP_201_CREATED,
 )
 async def add_user_xray_service(
-    user_data: XrayConfigCreate
+    user_data: XraySchemasCreate
 ):
     try:
-        await XrayService.add_user()
+        service = XrayService()
+        await service.add_user(user_data=user_data)
         return {"message": "Xray reloaded"}
     except Exception as e:
         logger.error(e)
@@ -44,15 +46,16 @@ async def add_user_xray_service(
 
 
 @router.delete(
-    "/delete-user",
+    "/delete-user/{user_id}",
     response_model=dict,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def delete_user_xray_service(
-    user_data: XrayConfigCreate
+    user_id: str
 ):
     try:
-        await XrayService.delete_user()
+        service = XrayService()
+        await service.delete_user(user_id=user_id)
         return {"message": "Xray reloaded"}
     except Exception as e:
         logger.error(e)

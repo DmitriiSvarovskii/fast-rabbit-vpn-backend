@@ -23,7 +23,7 @@ router = APIRouter(
 async def get_user_full_info(id: int):
     return UserFullInfo(
         id=user_data["id"],
-        telegram_id=user_data["telegram_id"],
+        telegram_id=id,
         first_name=user_data.get("first_name"),
         last_name=user_data.get("last_name"),
         username=user_data.get("username"),

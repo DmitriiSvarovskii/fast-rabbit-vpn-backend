@@ -3,8 +3,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api import routers
-from src.configs import app_settings
+from app.api import routers
+from app.core.configs import app_settings
 
 
 app = FastAPI(
@@ -29,7 +29,7 @@ for router in routers:
 
 if __name__ == "__main__":
     uvicorn.run(
-        "src.main:app",
+        "app.main:app",
         host=app_settings.SERVICE_HOST,
         port=app_settings.SERVICE_PORT,
         reload=app_settings.DEBUG,

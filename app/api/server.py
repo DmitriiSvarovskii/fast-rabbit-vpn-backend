@@ -2,8 +2,8 @@ import logging
 
 from fastapi import APIRouter, status
 
-from src.schemas.server import ServerBase
-from src.test_data import server_data
+from app.core.schemas.server import ServerBase
+from app.test_data import server_data
 
 logger = logging.getLogger(__name__)
 

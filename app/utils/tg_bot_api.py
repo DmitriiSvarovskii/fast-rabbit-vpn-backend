@@ -29,9 +29,8 @@ async def tg_answer_pre_checkout_query(query_id: str, ok: bool, error_message: s
         r.raise_for_status()
         return r.json()
 
+
 # опционально для возвратов
-
-
 async def tg_refund_star_payment(user_id: int, charge_id: str):
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.post(f"{BOT_API}/refundStarPayment", json={

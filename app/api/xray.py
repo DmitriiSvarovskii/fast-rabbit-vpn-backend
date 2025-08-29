@@ -2,8 +2,8 @@ import logging
 
 from fastapi import APIRouter, status
 
-from src.schemas.xray import XraySchemasCreate
-from src.utils.xray import XrayService
+from app.core.schemas.xray import XraySchemasCreate
+from app.utils.xray import XrayService
 
 logger = logging.getLogger(__name__)
 

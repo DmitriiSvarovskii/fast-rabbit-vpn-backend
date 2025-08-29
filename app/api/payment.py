@@ -2,9 +2,9 @@ import logging
 
 from fastapi import APIRouter, status
 
-from src.schemas.payment import PaymentBase, PaymentTest
-from src.schemas.history_payment import HistoryPaymentBase
-from src.test_data import user_data
+from app.core.schemas.payment import PaymentBase, PaymentTest
+from app.core.schemas.history_payment import HistoryPaymentBase
+from app.test_data import user_data
 
 logger = logging.getLogger(__name__)
 

@@ -2,10 +2,10 @@ import logging
 
 from fastapi import APIRouter, status
 
-from src.schemas.user_full import UserFullInfo
-from src.schemas.user_balance import UserBalanceBase
-from src.schemas.key import KeyBase
-from src.test_data import user_data
+from app.core.schemas.user_full import UserFullInfo
+from app.core.schemas.user_balance import UserBalanceBase
+from app.core.schemas.key import KeyBase
+from app.test_data import user_data
 
 logger = logging.getLogger(__name__)
 

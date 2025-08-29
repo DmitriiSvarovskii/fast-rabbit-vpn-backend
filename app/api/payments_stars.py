@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from aiogram import Bot
 from aiogram.types import LabeledPrice
 
-from src.utils.telegram_webapp import validate_webapp_init_data
+from app.utils.telegram_webapp import validate_webapp_init_data
 
 router = APIRouter(prefix="/payments/stars", tags=["payments-stars"])
 

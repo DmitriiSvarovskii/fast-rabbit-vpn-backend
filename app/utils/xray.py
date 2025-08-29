@@ -1,4 +1,4 @@
-from src.schemas.xray import XraySchemasCreate
+from app.core.schemas.xray import XraySchemasCreate
 
 
 class XrayService:

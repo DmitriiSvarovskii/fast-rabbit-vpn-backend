@@ -2,8 +2,8 @@ import logging
 
 from fastapi import APIRouter, status
 
-from src.schemas.key import KeyCreate
-from src.test_data import user_data, server_data
+from app.core.schemas.key import KeyCreate
+from app.test_data import user_data, server_data
 
 logger = logging.getLogger(__name__)
 

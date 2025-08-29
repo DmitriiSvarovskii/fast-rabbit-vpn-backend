@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, Request, HTTPException
-from src.utils.tg_bot_api import tg_answer_pre_checkout_query
+from app.utils.tg_bot_api import tg_answer_pre_checkout_query
 # from app.db import mark_paid, find_pending_by_payload ...  # твои функции
 
 router = APIRouter()

@@ -1,5 +1,8 @@
 # app/api/payments_stars.py
 
+from app.core.models.wallet_ledger import WalletEntry
+from sqlalchemy import select, func
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from app.core.models.payments import Payment
@@ -217,26 +220,71 @@ async def create_invoice(
 #     return CreateInvoiceResponse(invoice_link=link, stars=stars, payload=payload)
 
 
+# @router.get("/status")
+# async def status_endpoint(
+#     payload: str,
+#     _: dict = Depends(require_jwt),
+
+#     # init_data: Optional[str] = Header(
+#     #     default=None, alias="X-Telegram-Init-Data"),
+# ):
+#     """
+#     Returns current status of the given payment payload for the authenticated WebApp user.
+#     """
+#     # Optional but recommended: verify init data to ensure the caller is legitimate
+#     # try:
+#     #     validate_webapp_init_data(init_data or "", os.environ["BOT_TOKEN"])
+#     # except Exception:
+#     #     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bad init data")
+
+#     # TODO: fetch payment record by payload from DB and return real status
+#     # rec = get_payment_by_payload(payload)
+#     # if not rec: raise HTTPException(404, "Payment not found")
+#     # return {"payload": payload, "status": rec.status, "rub": rec.rub, "stars": rec.stars}
+
+#     return {"payload": payload, "status": "UNKNOWN"}
+
+
 @router.get("/status")
 async def status_endpoint(
     payload: str,
-    _: dict = Depends(require_jwt),
-
-    # init_data: Optional[str] = Header(
-    #     default=None, alias="X-Telegram-Init-Data"),
+    token: dict = Depends(require_jwt),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
-    Returns current status of the given payment payload for the authenticated WebApp user.
+    Returns current status of the given payment payload
+    and the up-to-date user balance.
     """
-    # Optional but recommended: verify init data to ensure the caller is legitimate
-    # try:
-    #     validate_webapp_init_data(init_data or "", os.environ["BOT_TOKEN"])
-    # except Exception:
-    #     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bad init data")
+    telegram_id = int(token["sub"])
 
-    # TODO: fetch payment record by payload from DB and return real status
-    # rec = get_payment_by_payload(payload)
-    # if not rec: raise HTTPException(404, "Payment not found")
-    # return {"payload": payload, "status": rec.status, "rub": rec.rub, "stars": rec.stars}
+    # 1) Находим пользователя
+    user = (
+        await db.execute(select(User).where(User.telegram_id == telegram_id))
+    ).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
-    return {"payload": payload, "status": "UNKNOWN"}
+    # 2) Ищем платеж по payload
+    payment = (
+        await db.execute(
+            select(Payment).where(Payment.payload == payload, Payment.user_id == user.id)
+        )
+    ).scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+
+    # 3) Считаем баланс из леджера
+    balance = (
+        await db.execute(
+            select(func.coalesce(func.sum(WalletEntry.amount_rub), 0))
+            .where(WalletEntry.user_id == user.id)
+        )
+    ).scalar_one()
+
+    return {
+        "payload": payment.payload,
+        "status": payment.status,
+        "rub": float(payment.rub_amount),
+        "stars": payment.stars_amount,
+        "balance": float(balance),
+    }

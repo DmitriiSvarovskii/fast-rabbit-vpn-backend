@@ -1,7 +1,8 @@
 import os
 import httpx
+from app.core.configs.bot import bot_settings
 
-BOT_API = f"https://api.telegram.org/bot{os.environ['BOT_TOKEN']}"
+BOT_API = f"https://api.telegram.org/bot{bot_settings.BOT_TOKEN}"
 
 
 async def tg_create_invoice_link(*, title, description, payload, stars: int):

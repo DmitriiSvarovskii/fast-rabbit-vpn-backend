@@ -1,5 +1,6 @@
 # app/api/payments_stars.py
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from app.core.models.payments import Payment
 from app.core.models.users import User
@@ -62,8 +63,8 @@ async def create_invoice(
     db: AsyncSession = Depends(get_async_session),
 ):
     """
-    Создаёт Telegram Stars (XTR) инвойс и фиксирует PENDING-платёж в БД (идемпотентно по payload).
-    Пользователь берётся из JWT (payload['sub'] = telegram_id).
+    Создаёт Telegram Stars (XTR) инвойс и фиксирует/обновляет PENDING-платёж в БД (идемпотентно по payload).
+    Пользователь определяется по telegram_id из JWT (payload['sub']).
     """
     # 1) Валидация суммы
     if body.amount_rub < MIN_RUB or body.amount_rub > MAX_RUB:
@@ -80,52 +81,75 @@ async def create_invoice(
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
-    # 3) Пересчёт в звёзды (целое, вверх)
-    stars = int(math.ceil(Decimal(str(body.amount_rub)) * XTR_PER_RUB))
+    # 3) Пересчёт в звёзды (целое, вверх) — всё в Decimal
+    rub_dec = Decimal(str(body.amount_rub))
+    stars = int(math.ceil(rub_dec * XTR_PER_RUB))
     if stars <= 0:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимая сумма в звёздах")
 
-    # 4) Идемпотентный payload (привязываем к tg_id и сумме)
+    # 4) Идемпотентный payload (tg_id + сумма + версия)
     payload = f"topup:{telegram_id}:{body.amount_rub}:v1"
 
-    # 5) Запись платежа PENDING (или переиспользуем, если уже есть)
-    async with db.begin():
-        payment = (
-            await db.execute(select(Payment).where(Payment.payload == payload).with_for_update())
-        ).scalar_one_or_none()
+    # 5) Найдём существующий платёж по payload
+    payment = (
+        await db.execute(select(Payment).where(Payment.payload == payload))
+    ).scalar_one_or_none()
 
-        if payment is None:
-            payment = Payment(
-                user_id=user.id,                 # внутренний id пользователя
-                payload=payload,
-                rub_amount=Decimal(str(body.amount_rub)),
-                stars_amount=stars,
-                status=PaymentStatus.PENDING,
-                currency="XTR",
-            )
-            db.add(payment)
-            # commit произойдёт по выходу из begin()
+    if payment is None:
+        # Создаём новый PENDING
+        payment = Payment(
+            user_id=user.id,                 # ВНУТРЕННИЙ users.id
+            payload=payload,
+            rub_amount=rub_dec,
+            stars_amount=stars,
+            status=PaymentStatus.PENDING,
+            currency="XTR",
+        )
+        db.add(payment)
+        try:
+            await db.commit()
+        except IntegrityError:
+            # На случай гонки — перечитаем и пойдём как с существующей записью
+            await db.rollback()
+            payment = (
+                await db.execute(select(Payment).where(Payment.payload == payload))
+            ).scalar_one_or_none()
 
-        else:
-            # Если уже оплачен/завален — не даём повторить с тем же payload
-            if payment.status == PaymentStatus.PAID:
-                raise HTTPException(status.HTTP_409_CONFLICT, "Invoice already paid")
-            if payment.status != PaymentStatus.PENDING:
-                raise HTTPException(status.HTTP_409_CONFLICT, f"Invoice is {payment.status}")
+    # Если после гонки всё ещё нет — это странно, но безопасно отдадим 409
+    if payment is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cannot create invoice, try again")
 
-            # На всякий случай обновим суммы, если логика пересчёта менялась
-            payment.rub_amount = Decimal(str(body.amount_rub))
-            payment.stars_amount = stars
-            payment.currency = "XTR"
+    # 6) Если платёж есть — проверим статус/обновим суммы
+    if payment.status == PaymentStatus.PAID:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Invoice already paid")
+    if payment.status != PaymentStatus.PENDING:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Invoice is {payment.status}")
 
-    # 6) Создание ссылки на оплату в Stars
+    # На случай, если логика сменится — актуализируем суммы
+    changed = False
+    if payment.rub_amount != rub_dec:
+        payment.rub_amount = rub_dec
+        changed = True
+    if payment.stars_amount != stars:
+        payment.stars_amount = stars
+        changed = True
+    if payment.currency != "XTR":
+        payment.currency = "XTR"
+        changed = True
+
+    if changed:
+        await db.commit()
+    else:
+        # чтобы гарантировать, что payment.id загружен (если только что коммитили)
+        await db.refresh(payment)
+
+    # 7) Создаём ссылку в Telegram Stars (вне БД-операций)
     link = await bot.create_invoice_link(
         title="Пополнение баланса",
         description=f"Пополнение на {body.amount_rub} ₽ (~{stars} ⭐️)",
         payload=payload,
         currency="XTR",
         prices=[LabeledPrice(label="Balance top-up", amount=stars)],
-        # subscription_period=2592000,  # если когда-нибудь понадобятся подписки
     )
 
     return CreateInvoiceResponse(invoice_link=link, stars=stars, payload=payload)

@@ -33,7 +33,7 @@ async def get_bot() -> Bot:
 
 # ===== Routes =====
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def _credit_if_absent(

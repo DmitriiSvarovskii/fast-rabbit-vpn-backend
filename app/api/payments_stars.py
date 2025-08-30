@@ -23,7 +23,7 @@ from app.core.consts import LedgerType, PaymentStatus
 router = APIRouter(prefix="/payments/stars", tags=["payments-stars"])
 
 # Business rules / limits
-XTR_PER_RUB = float(os.getenv("XTR_PER_RUB", "0.5"))   # e.g. 1₽ = 0.5⭐
+XTR_PER_RUB = Decimal(os.getenv("XTR_PER_RUB", "0.5"))   # e.g. 1₽ = 0.5⭐
 MIN_RUB = int(os.getenv("MIN_TOPUP_RUB", "10"))
 MAX_RUB = int(os.getenv("MAX_TOPUP_RUB", "50000"))
 

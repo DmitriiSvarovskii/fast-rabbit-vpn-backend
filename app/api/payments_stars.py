@@ -218,17 +218,19 @@ async def create_invoice(
 @router.get("/status")
 async def status_endpoint(
     payload: str,
-    init_data: Optional[str] = Header(
-        default=None, alias="X-Telegram-Init-Data"),
+    _: dict = Depends(require_jwt),
+
+    # init_data: Optional[str] = Header(
+    #     default=None, alias="X-Telegram-Init-Data"),
 ):
     """
     Returns current status of the given payment payload for the authenticated WebApp user.
     """
     # Optional but recommended: verify init data to ensure the caller is legitimate
-    try:
-        validate_webapp_init_data(init_data or "", os.environ["BOT_TOKEN"])
-    except Exception:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bad init data")
+    # try:
+    #     validate_webapp_init_data(init_data or "", os.environ["BOT_TOKEN"])
+    # except Exception:
+    #     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bad init data")
 
     # TODO: fetch payment record by payload from DB and return real status
     # rec = get_payment_by_payload(payload)

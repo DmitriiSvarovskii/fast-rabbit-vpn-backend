@@ -17,6 +17,7 @@ from app.core.configs.bot import bot_settings
 from app.core.models.payments import Payment
 from app.core.models.users import User
 router = APIRouter()
+from uuid import uuid4
 
 
 async def get_bot() -> Bot:

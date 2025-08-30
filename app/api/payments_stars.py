@@ -11,6 +11,7 @@ from app.api.jwt_auth import require_jwt
 import math
 import os
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Depends, status
 from pydantic import BaseModel, Field
@@ -88,7 +89,8 @@ async def create_invoice(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимая сумма в звёздах")
 
     # 4) Идемпотентный payload (tg_id + сумма + версия)
-    payload = f"topup:{telegram_id}:{body.amount_rub}:v1"
+    nonce = uuid4().hex[:8]
+    payload = f"topup:{telegram_id}:{body.amount_rub}:v2:{nonce}"
 
     # 5) Найдём существующий платёж по payload
     payment = (

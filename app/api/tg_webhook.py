@@ -89,7 +89,7 @@ async def telegram_webhook(
                 select(Payment.status).where(Payment.payload == payload)
             )).scalar_one_or_none()
             ok = status_ == PaymentStatus.PENDING
-        await tg_answer_pre_checkout_query(bot, qid, ok=ok, error_message=None if ok else "Invoice is not available")
+        await tg_answer_pre_checkout_query(qid, ok=ok, error_message=None if ok else "Invoice is not available")
         return {"ok": True}
 
     # 2) успешная оплата

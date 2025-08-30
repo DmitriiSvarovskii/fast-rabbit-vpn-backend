@@ -20,6 +20,7 @@ app.add_middleware(
     allow_origins=app_settings.ALLOW_ORIGINS,
     allow_methods=app_settings.ALLOW_METHODS,
     allow_headers=app_settings.ALLOW_HEADERS,
+    max_age=3600,
 )
 
 

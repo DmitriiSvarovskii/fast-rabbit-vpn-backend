@@ -1,5 +1,6 @@
 # app/api/payments_stars.py
 
+from app.api.jwt_auth import require_jwt
 import math
 import os
 from typing import Optional
@@ -52,8 +53,10 @@ async def get_bot() -> Bot:
 async def create_invoice(
     body: CreateInvoiceRequest,
     bot: Bot = Depends(get_bot),
-    init_data: Optional[str] = Header(
-        default=None, alias="X-Telegram-Init-Data"),
+    # init_data: Optional[str] = Header(
+    #     default=None, alias="X-Telegram-Init-Data"),
+        token: dict = Depends(require_jwt),
+
 ):
     """
     Creates a Telegram Stars (XTR) invoice link for a WebApp user.
@@ -66,21 +69,21 @@ async def create_invoice(
             detail=f"Сумма должна быть от {MIN_RUB} до {MAX_RUB} ₽",
         )
 
-    if not init_data:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing init data")
+    # if not init_data:
+    #     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing init data")
 
-    # Validate WebApp initData signature
-    try:
-        parsed = validate_webapp_init_data(init_data, os.environ["BOT_TOKEN"])
-    except Exception as e:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED,
-                            f"Bad init data: {e}")
+    # # Validate WebApp initData signature
+    # try:
+    #     parsed = validate_webapp_init_data(init_data, os.environ["BOT_TOKEN"])
+    # except Exception as e:
+    #     raise HTTPException(status.HTTP_401_UNAUTHORIZED,
+    #                         f"Bad init data: {e}")
 
-    user = parsed.get("user_obj") or {}
-    user_id = user.get("id")
-    if not user_id:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "No user id")
-
+    # user = parsed.get("user_obj") or {}
+    # user_id = user.get("id")
+    # if not user_id:
+    #     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "No user id")
+    user_id = token.get('sub')
     # Convert RUB -> Stars (integer, ceil to avoid undercharging)
     stars = int(math.ceil(body.amount_rub * XTR_PER_RUB))
     if stars <= 0:

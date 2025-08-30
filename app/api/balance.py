@@ -10,7 +10,6 @@ from app.core.schemas.user_balance import UserBalanceBase
 from app.core.schemas.key import KeyBase
 from app.core.configs.vpn_config import vpn_settings
 from datetime import datetime
-from app.api.jwt_auth import require_jwt
 
 router = APIRouter(prefix="/user", tags=["User"])
 
@@ -29,17 +28,15 @@ def dt_to_str(dt: datetime | None) -> str:
 
 
 @router.get(
-    "/",
+    "/{telegram_id}",
     response_model=UserFullInfo,
-    # response_model=dict,
     status_code=status.HTTP_200_OK,
 )
 async def get_user_full_info(
-    token: dict = Depends(require_jwt),
-    # telegram_id: int,
+    telegram_id: int,
     db: AsyncSession = Depends(get_async_session),
 ):
-    telegram_id = int(token["sub"])
+    # 1. Пользователь
     user = (
         await db.execute(select(User).where(User.telegram_id == telegram_id))
     ).scalar_one_or_none()
@@ -80,68 +77,3 @@ async def get_user_full_info(
             for cfg in configs
         ],
     )
-
-
-@router.get(
-    "/balance",
-    response_model=UserBalanceBase,
-    status_code=status.HTTP_200_OK,
-)
-async def get_user_balance(
-    token: dict = Depends(require_jwt),
-    db: AsyncSession = Depends(get_async_session),
-):
-    """
-    Возвращает текущий баланс пользователя.
-    Идентификация по telegram_id из JWT (payload['sub']).
-    """
-    telegram_id = int(token["sub"])
-
-    # Находим пользователя (чтобы получить его id и отдать 404, если не существует)
-    user = (
-        await db.execute(select(User).where(User.telegram_id == telegram_id))
-    ).scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Сумма всех проводок; если нет записей — вернётся 0
-    balance = (
-        await db.execute(
-            select(func.coalesce(func.sum(WalletEntry.amount_rub), 0))
-            .where(WalletEntry.user_id == user.id)
-        )
-    ).scalar_one()
-
-    return UserBalanceBase(balance=float(balance))
-# import logging
-
-# from fastapi import APIRouter, status
-
-# from app.core.schemas.user_full import UserFullInfo
-# from app.core.schemas.user_balance import UserBalanceBase
-# from app.core.schemas.key import KeyBase
-# from app.test_data import user_data
-
-# logger = logging.getLogger(__name__)
-
-# router = APIRouter(
-#     prefix="/user",
-#     tags=["User"]
-# )
-
-
-# @router.get(
-#     "/{id}",
-#     response_model=UserFullInfo,
-#     status_code=status.HTTP_200_OK,
-# )
-# async def get_user_full_info(id: int):
-#     return UserFullInfo(
-#         id=user_data["id"],
-#         telegram_id=id,
-#         first_name=user_data.get("first_name"),
-#         last_name=user_data.get("last_name"),
-#         username=user_data.get("username"),
-#         balance=UserBalanceBase(balance=user_data["balance"]),
-#         keys=[KeyBase(**k) for k in user_data["keys"]],
-#     )
